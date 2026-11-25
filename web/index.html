@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tapster · price feeds on tap for gno.land</title>
+<meta name="description" content="Staked, slashable price feeds for gno.land. Any realm can read them for free.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>">
+<style>
+  :root{
+    --bg:#fbf6ec; --panel:#fffdf8; --ink:#2a1d10; --muted:#7a6650; --line:#eadfcc;
+    --amber:#d97706; --amber-2:#f59e0b; --foam:#fff7e6; --green:#15803d; --red:#b91c1c; --wood:#5b3a1e;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45}
+  a{color:var(--amber)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+  header{background:linear-gradient(180deg,#3b2412,#5b3a1e);color:#fdf3e1;border-bottom:4px solid var(--amber-2)}
+  .bar{display:flex;align-items:center;gap:16px;padding:14px 0}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;letter-spacing:-.02em}
+  .logo span.mug{font-size:28px}
+  .tag{opacity:.8;font-size:13px}
+  .spacer{flex:1}
+  .net{font:12px var(--mono);background:rgba(255,255,255,.1);padding:4px 8px;border-radius:999px}
+  .btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--amber-2);color:#2a1d10}
+  .btn:hover{filter:brightness(1.05)} .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:inherit;border:1px solid currentColor}
+  .btn.small{padding:6px 10px;font-size:13px;border-radius:8px}
+  .hero{padding:26px 0 8px}
+  .hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.02em}
+  .hero p{margin:0;color:var(--muted);max-width:760px}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .stat b{display:block;font:700 20px var(--mono)} .stat small{color:var(--muted)}
+  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:8px}
+  nav.tabs button{background:none;border:0;padding:10px 14px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+  nav.tabs button.on{color:var(--ink);border-bottom-color:var(--amber-2)}
+  section.view{display:none;padding:18px 0 40px} section.view.on{display:block}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:transform .08s,box-shadow .08s}
+  .card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(91,58,30,.08)}
+  .card.sel{outline:3px solid var(--amber-2)}
+  .card .pair{font-weight:800;display:flex;justify-content:space-between;align-items:center}
+  .card .price{font:700 24px var(--mono);margin:6px 0 2px;letter-spacing:-.02em}
+  .chg{font:600 12px var(--mono)} .up{color:var(--green)} .down{color:var(--red)}
+  .meta{font-size:12px;color:var(--muted)}
+  .fresh{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:#a3a3a3}
+  .fresh.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)} .fresh.stale{background:#f59e0b}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+  .panel h2{margin:0 0 4px;font-size:20px} .panel h3{margin:18px 0 8px;font-size:15px}
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:1;min-width:280px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)} th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  td.num{font-family:var(--mono)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+  .b-acc{background:#dcfce7;color:#166534} .b-out{background:#fee2e2;color:#991b1b} .b-neu{background:#f3f4f6;color:#374151} .b-nq{background:#fef3c7;color:#92400e}
+  .chart{width:100%;height:260px;display:block}
+  .chart-wrap{position:relative}
+  .tip{position:absolute;pointer-events:none;background:#2a1d10;color:#fff;font:12px var(--mono);padding:4px 7px;border-radius:6px;transform:translate(-50%,-130%);display:none;white-space:nowrap}
+  form.f{display:grid;gap:8px;margin-top:8px}
+  label{font-size:13px;color:var(--muted)}
+  input,select{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font:14px var(--sans)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .note{font-size:13px;color:var(--muted)}
+  .banner{background:#fef3c7;border:1px solid #fcd34d;color:#78350f;padding:10px 14px;border-radius:12px;margin-top:14px;font-size:14px;display:none}
+  .event{padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px} .event .when{color:var(--muted);font:12px var(--mono);margin-right:8px}
+  pre{background:#2a1d10;color:#fde68a;padding:14px;border-radius:12px;overflow:auto;font:13px/1.5 var(--mono)}
+  .toast{position:fixed;right:18px;bottom:18px;max-width:420px;background:#2a1d10;color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;font-size:14px;z-index:9}
+  .tabcard{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#fff}
+  .tabcard .t{display:flex;justify-content:space-between;font-weight:700}
+  .quote{font:700 18px var(--mono)}
+  footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--muted);font-size:13px}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)} .stats{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <div class="logo"><span class="mug">🍺</span> Tapster</div>
+    <div class="tag">price feeds on tap for gno.land</div>
+    <div class="spacer"></div>
+    <div class="net" id="net">…</div>
+    <button class="btn" id="connect">Connect Adena</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Prices any realm can trust, and read for free.</h1>
+    <p>Reporters stake GNOT and post prices every round. The answer is the <b>stake-weighted median</b>. Reporters close to it earn from the reward pool; reporters far from it <b>lose part of their stake</b>, which refills the pool. Honest reporters get paid by dishonest ones.</p>
+  </div>
+  <div class="banner" id="banner"></div>
+  <div class="stats">
+    <div class="stat"><b id="s-rep">–</b><small>active reporters</small></div>
+    <div class="stat"><b id="s-stake">–</b><small>GNOT staked</small></div>
+    <div class="stat"><b id="s-slash">–</b><small>GNOT slashed</small></div>
+    <div class="stat"><b id="s-rew">–</b><small>GNOT paid to reporters</small></div>
+    <div class="stat"><b id="s-cons">–</b><small>realms using Tapster</small></div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-v="feeds" class="on">Feeds</button>
+    <button data-v="reporters">Reporters</button>
+    <button data-v="tab">Tab demo</button>
+    <button data-v="activity">Activity</button>
+    <button data-v="integrate">Integrate</button>
+  </nav>
+
+  <section class="view on" id="v-feeds">
+    <div class="grid" id="cards"></div>
+    <div class="panel" id="detail"></div>
+  </section>
+
+  <section class="view" id="v-reporters">
+    <div class="row">
+      <div class="col" style="flex:2">
+        <div class="panel"><h2>Leaderboard</h2><table><thead><tr><th>#</th><th>Reporter</th><th>Stake</th><th>Accurate</th><th>Slashed</th><th>Earned</th><th>Status</th></tr></thead><tbody id="rep-body"></tbody></table></div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <h2>Become a reporter</h2>
+          <p class="note">Stake at least <span id="minstake">1</span> GNOT, then run the reporter bot. Your stake stays slashable for an unbonding period after you exit.</p>
+          <form class="f" id="f-stake">
+            <label>Display name</label><input name="name" maxlength="32" placeholder="e.g. Lagos Tap">
+            <label>Stake (GNOT)</label><input name="amt" type="number" min="1" step="0.1" value="1">
+            <button class="btn" type="submit">Stake</button>
+          </form>
+          <h3>Your reporter</h3>
+          <div id="me" class="note">Connect Adena to see your stake and rewards.</div>
+          <div class="row" style="gap:8px;margin-top:8px">
+            <button class="btn small ghost" id="b-claim">Claim rewards</button>
+            <button class="btn small ghost" id="b-exit">Request exit</button>
+            <button class="btn small ghost" id="b-withdraw">Withdraw</button>
+          </div>
+          <h3>Submit a price by hand</h3>
+          <form class="f" id="f-submit">
+            <div class="two"><select name="pair" id="submit-pair"></select><input name="price" type="number" step="any" placeholder="price in USD"></div>
+            <button class="btn ghost" type="submit">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-tab">
+    <div class="row">
+      <div class="col" style="flex:2">
+        <div class="panel">
+          <h2>🍻 Tab: priced in dollars, paid in GNOT</h2>
+          <p class="note">A separate realm that imports Tapster. It converts the bill at the live GNOT-USD price at the moment you pay, refuses stale prices, pays the bartender exactly what is due and refunds the rest.</p>
+          <div id="tab-price" class="quote" style="margin:8px 0"></div>
+          <div id="tab-list"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <h2>Open a tab</h2>
+          <form class="f" id="f-open"><label>Title</label><input name="title" maxlength="48" placeholder="Friday at the tavern"><button class="btn" type="submit">Open tab</button></form>
+          <h3>Add an item (bartender)</h3>
+          <form class="f" id="f-add">
+            <div class="two"><input name="id" type="number" min="1" placeholder="tab #"><input name="usd" type="number" step="0.01" min="0.01" placeholder="price $"></div>
+            <input name="name" maxlength="32" placeholder="item, e.g. Mead">
+            <button class="btn ghost" type="submit">Add item</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-activity"><div class="panel"><h2>Activity</h2><div id="events"></div></div></section>
+
+  <section class="view" id="v-integrate">
+    <div class="panel">
+      <h2>Read Tapster prices from your realm</h2>
+      <p class="note">Reads are free, need no setup and return plain values.</p>
+      <pre id="code"></pre>
+      <table><thead><tr><th>Function</th><th>Returns</th></tr></thead><tbody>
+        <tr><td class="num">Latest(pair)</td><td>price, decimals, updatedAt, round, ok</td></tr>
+        <tr><td class="num">PriceFresh(pair, maxAgeSecs)</td><td>price, decimals, ok (false when stale)</td></tr>
+        <tr><td class="num">MustPriceFresh(pair, maxAgeSecs)</td><td>price, decimals (panics when stale)</td></tr>
+        <tr><td class="num">History(pair, n)</td><td>"unix:price" list</td></tr>
+        <tr><td class="num">RegisterConsumer(cur, note)</td><td>lists your realm under "Used by"</td></tr>
+      </tbody></table>
+      <p class="note">Off-chain: query <span class="num">vm/qrender</span> with <span class="num" id="jsonpath"></span>, or read the same pages on gnoweb.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  Tapster is open source. Realm: <a id="realm-link" target="_blank" rel="noopener"></a> · Tab: <a id="tab-link" target="_blank" rel="noopener"></a>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Configuration. deploy.sh writes the namespace (your g1 address) here; it
+// can also be overridden with ?ns=g1...&rpc=...&chain=...&web=...
+const CONFIG = {
+  ns: "TAPSTER_NAMESPACE",
+  rpc: "https://rpc.onyx.testnets.gno.land:443",
+  chainId: "onyx-1",
+  gnoweb: "https://onyx.testnets.gno.land",
+};
+const qs = new URLSearchParams(location.search);
+for (const [k, q] of [["ns","ns"],["rpc","rpc"],["chainId","chain"],["gnoweb","web"]]) if (qs.get(q)) CONFIG[k] = qs.get(q);
+const TAPSTER = `gno.land/r/${CONFIG.ns}/tapster/v0`;
+const TABREALM = `gno.land/r/${CONFIG.ns}/tab/v0`;
+
+// ---------------------------------------------------------------------------
+// Chain reads
+const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
+const unb64 = (s) => decodeURIComponent(escape(atob(s)));
+async function abci(path, data) {
+  const r = await fetch(CONFIG.rpc, {method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({jsonrpc:"2.0", id:1, method:"abci_query", params:{path, data:b64(data)}})});
+  const j = await r.json();
+  const rb = j?.result?.response?.ResponseBase;
+  if (!rb || rb.Error) throw new Error(rb?.Error ? JSON.stringify(rb.Error).slice(0,160) : "no response");
+  return unb64(rb.Data || "");
+}
+const render = async (realm, path) => JSON.parse(await abci("vm/qrender", `${realm}:${path}`));
+
+// ---------------------------------------------------------------------------
+// Formatting
+const $ = (id) => document.getElementById(id);
+const gnot = (u) => (u/1e6).toLocaleString(undefined,{maximumFractionDigits:3});
+function fmtPrice(p, dec) {
+  const v = p / 10**dec;
+  if (v >= 1) return "$" + v.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  return "$" + v.toFixed(dec);
+}
+function ago(t) {
+  if (!t) return "never";
+  const d = Math.floor(Date.now()/1000) - t;
+  if (d < 90) return Math.max(d,0)+"s ago"; if (d < 5400) return Math.floor(d/60)+"m ago";
+  if (d < 172800) return Math.floor(d/3600)+"h ago"; return Math.floor(d/86400)+"d ago";
+}
+const short = (a) => a && a.length > 14 ? a.slice(0,8)+"…"+a.slice(-4) : a;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg, ms=5000){ const t=$("toast"); t.innerHTML=msg; t.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(()=>t.style.display="none", ms); }
+const badge = (o) => ({accurate:'<span class="badge b-acc">accurate</span>', outlier:'<span class="badge b-out">slashed</span>', neutral:'<span class="badge b-neu">neutral</span>', "no quorum":'<span class="badge b-nq">no quorum</span>'}[o] || esc(o));
+
+// ---------------------------------------------------------------------------
+// Charts (plain SVG)
+function sparkPath(hist, w, h, pad) {
+  const ys = hist.map(x => x[1]); const lo = Math.min(...ys), hi = Math.max(...ys), span = (hi-lo) || 1;
+  return hist.map((x,i) => [pad + i*(w-2*pad)/Math.max(hist.length-1,1), h - pad - (x[1]-lo)*(h-2*pad)/span]);
+}
+function spark(hist) {
+  if (!hist || hist.length < 2) return '<div class="meta" style="height:40px">waiting for history…</div>';
+  const pts = sparkPath(hist.slice(-40), 240, 40, 3);
+  const up = hist[hist.length-1][1] >= hist[0][1];
+  return `<svg viewBox="0 0 240 40" width="100%" height="40"><polyline fill="none" stroke="${up?'#15803d':'#b91c1c'}" stroke-width="2" points="${pts.map(p=>p.join(',')).join(' ')}"/></svg>`;
+}
+function bigChart(f) {
+  const hist = f.history || [];
+  if (hist.length < 2) return '<p class="note">The chart appears after two answers.</p>';
+  const W = 900, H = 260, P = 30; const pts = sparkPath(hist, W, H, P);
+  const up = hist[hist.length-1][1] >= hist[0][1]; const c = up ? "#15803d" : "#b91c1c";
+  const ys = hist.map(x=>x[1]);
+  const area = `${P},${H-P} ` + pts.map(p=>p.join(',')).join(' ') + ` ${W-P},${H-P}`;
+  return `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" id="big">
+    <rect width="${W}" height="${H}" rx="12" fill="#fff7e6"/>
+    <polygon points="${area}" fill="${c}" opacity=".10"/>
+    <polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+    <text x="${P}" y="18" font-size="12" fill="#7a6650">high ${fmtPrice(Math.max(...ys), f.decimals)}</text>
+    <text x="${P}" y="${H-8}" font-size="12" fill="#7a6650">low ${fmtPrice(Math.min(...ys), f.decimals)}</text>
+    <circle id="dot" r="5" fill="${c}" style="display:none"/>
+  </svg><div class="tip" id="tip"></div></div>`;
+}
+function wireChart(f) {
+  const svg = document.getElementById("big"); if (!svg) return;
+  const hist = f.history; const pts = sparkPath(hist, 900, 260, 30);
+  svg.addEventListener("mousemove", (e) => {
+    const r = svg.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width * 900;
+    let i = 0, best = 1e9; pts.forEach((p,k)=>{ const d=Math.abs(p[0]-x); if(d<best){best=d;i=k;} });
+    const dot = document.getElementById("dot"); dot.setAttribute("cx", pts[i][0]); dot.setAttribute("cy", pts[i][1]); dot.style.display="";
+    const tip = $("tip"); tip.style.display="block"; tip.style.left = (pts[i][0]/900*r.width)+"px"; tip.style.top = (pts[i][1]/260*r.height)+"px";
+    tip.textContent = `${fmtPrice(hist[i][1], f.decimals)} · ${new Date(hist[i][0]*1000).toLocaleTimeString()}`;
+  });
+  svg.addEventListener("mouseleave", () => { $("tip").style.display="none"; document.getElementById("dot").style.display="none"; });
+}
+
+// ---------------------------------------------------------------------------
+// State + rendering
+let S = { feeds: {}, sel: "GNOT-USD", reporters: null, tabs: null, demo: false, account: null };
+
+async function load() {
+  try {
+    const all = await render(TAPSTER, "json");
+    const detailed = await Promise.all(all.feeds.map(f => render(TAPSTER, "json/"+f.pair)));
+    S.feeds = Object.fromEntries(detailed.map(f => [f.pair, f]));
+    S.reporters = await render(TAPSTER, "json/reporters");
+    try { S.tabs = await render(TABREALM, "json"); } catch { S.tabs = null; }
+    S.demo = false; $("banner").style.display = "none";
+  } catch (e) {
+    if (!Object.keys(S.feeds).length) { loadDemo(); }
+    $("banner").style.display = "block";
+    $("banner").innerHTML = S.demo ? `Showing <b>demo data</b>: could not reach <code>${esc(TAPSTER)}</code> (${esc(e.message)}). Add <code>?ns=&lt;deployer g1 address&gt;</code> to the URL.` : `Live data paused: ${esc(e.message)}`;
+  }
+  draw();
+}
+
+function draw() {
+  const feeds = Object.values(S.feeds);
+  const R = S.reporters || {reporters:[], events:[], totalSlashed:0, totalRewards:0, consumers:"", minStake:1e6};
+  $("s-rep").textContent = R.reporters.filter(r=>r.active).length;
+  $("s-stake").textContent = gnot(R.reporters.reduce((a,r)=>a+r.stake,0));
+  $("s-slash").textContent = gnot(R.totalSlashed);
+  $("s-rew").textContent = gnot(R.totalRewards);
+  $("s-cons").textContent = R.consumers ? R.consumers.split(",").filter(Boolean).length : 0;
+  $("minstake").textContent = gnot(R.minStake);
+
+  $("cards").innerHTML = feeds.map(f => {
+    const h = f.history || []; const first = h.length ? h[0][1] : 0;
+    let chg = first ? (f.price - first) / first * 100 : 0; if (Math.abs(chg) < 0.005) chg = 0;
+    const fresh = f.hasAnswer && (Date.now()/1000 - f.updatedAt) < f.roundSecs*2 + 60;
+    return `<div class="card ${f.pair===S.sel?'sel':''}" data-pair="${f.pair}">
+      <div class="pair"><span><span class="fresh ${f.hasAnswer?(fresh?'ok':'stale'):''}"></span>${f.pair}</span><span class="chg ${chg>0?'up':chg<0?'down':''}">${h.length>1?(chg>0?'+':'')+chg.toFixed(2)+'%':''}</span></div>
+      <div class="price">${f.hasAnswer ? fmtPrice(f.price, f.decimals) : "—"}</div>
+      <div class="meta">${f.hasAnswer ? `${ago(f.updatedAt)} · ${f.reports} reports · spread ${(f.spreadBps/100).toFixed(2)}%` : "waiting for reporters"}</div>
+      ${spark(h)}
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".card").forEach(c => c.onclick = () => { S.sel = c.dataset.pair; draw(); });
+
+  const f = S.feeds[S.sel] || feeds[0];
+  if (f) {
+    const lr = f.lastRound || [];
+    $("detail").innerHTML = `
+      <div class="row"><div class="col" style="flex:3">
+        <h2>${f.pair} ${f.hasAnswer ? `<span style="font-family:var(--mono)">${fmtPrice(f.price,f.decimals)}</span>`:""}</h2>
+        <div class="meta">round ${f.round||"–"} · every ${f.roundSecs}s · needs ${f.minReports} reports · reward pool ${gnot(f.pool)} GNOT ${f.paused?" · <b>paused</b>":""}</div>
+        ${bigChart(f)}
+      </div><div class="col">
+        <h3>Last closed round</h3>
+        ${lr.length ? `<table><thead><tr><th>Reporter</th><th>Price</th><th>Off</th><th></th></tr></thead><tbody>${lr.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${fmtPrice(r.price,f.decimals)}</td><td class="num">${(r.devBps/100).toFixed(2)}%</td><td>${badge(r.outcome)}</td></tr>`).join("")}</tbody></table>` : '<p class="note">No closed round yet.</p>'}
+        <h3>Sponsor this feed</h3>
+        <form class="f" id="f-fund"><div class="two"><input name="amt" type="number" min="0.1" step="0.1" value="5"><button class="btn" type="submit">Fund pool</button></div></form>
+        <p class="note">Funds pay accurate reporters. <a target="_blank" rel="noopener" href="${CONFIG.gnoweb}/r/${CONFIG.ns}/tapster/v0:feed/${f.pair}">Open on gnoweb</a></p>
+      </div></div>`;
+    wireChart(f);
+    $("f-fund").onsubmit = (e) => { e.preventDefault(); call(TAPSTER, "Fund", [f.pair], Math.round(+e.target.amt.value*1e6)); };
+  }
+
+  $("submit-pair").innerHTML = feeds.map(f=>`<option>${f.pair}</option>`).join("");
+
+  const reps = [...R.reporters].sort((a,b)=>b.stake-a.stake);
+  $("rep-body").innerHTML = reps.length ? reps.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.name||short(r.address))}</b><br><span class="meta num">${short(r.address)}</span></td><td class="num">${gnot(r.stake)}</td><td class="num">${r.accurate}/${r.reports}</td><td class="num">${r.outliers?gnot(r.slashed)+` (${r.outliers}×)`:"—"}</td><td class="num">${gnot(r.earned)}</td><td>${r.exitAt? (Date.now()/1000>=r.exitAt?"can withdraw":"unbonding") : r.active?"🟢 active":"🔴 under-staked"}</td></tr>`).join("") : '<tr><td colspan="7" class="note">No reporters yet. Be the first.</td></tr>';
+
+  const me = S.account && R.reporters.find(r => r.address === S.account);
+  $("me").innerHTML = !S.account ? "Connect Adena to see your stake and rewards." : me ? `Stake <b>${gnot(me.stake)}</b> GNOT · claimable <b>${gnot(me.rewards)}</b> GNOT · ${me.accurate}/${me.reports} accurate` : `${short(S.account)} is not a reporter yet.`;
+
+  $("events").innerHTML = (R.events||[]).map(e=>`<div class="event"><span class="when">${ago(e.at)}</span>${e.kind==="slash"?"🔪 ":e.kind==="join"?"👋 ":e.kind==="fund"?"💰 ":e.kind==="consumer"?"🔌 ":""}${esc(e.text)}</div>`).join("") || '<p class="note">Nothing yet.</p>';
+
+  // Tab demo
+  const g = S.feeds["GNOT-USD"];
+  const gfresh = g && g.hasAnswer && (Date.now()/1000 - g.updatedAt) <= 600;
+  $("tab-price").innerHTML = g && g.hasAnswer ? `1 GNOT = ${fmtPrice(g.price, g.decimals)} ${gfresh?"":'<span class="badge b-nq">stale: payments paused</span>'}` : "Waiting for a GNOT-USD price";
+  const tabs = S.tabs?.tabs || [];
+  $("tab-list").innerHTML = tabs.length ? tabs.map(t => {
+    const due = g && g.hasAnswer ? Math.ceil(t.total * 10**(g.decimals+4) / g.price) : 0;
+    return `<div class="tabcard"><div class="t"><span>#${t.id} ${esc(t.title)}</span><span class="num">$${(t.total/100).toFixed(2)}</span></div>
+      <div class="meta">${t.items.map(i=>`${esc(i.name)} $${(i.cents/100).toFixed(2)}`).join(" · ") || "no items yet"} · bartender ${short(t.bartender)}</div>
+      ${t.paid ? `<div style="margin-top:6px">✅ Paid <b>${gnot(t.paidUgnot)} GNOT</b> at ${fmtPrice(t.paidPrice, 6)}/GNOT by ${short(t.payer)}</div>`
+        : t.total && gfresh ? `<div style="margin-top:8px;display:flex;gap:10px;align-items:center"><span class="quote">${gnot(due)} GNOT</span><button class="btn small" data-pay="${t.id}" data-due="${due}">Pay tab</button><span class="meta">sends 2% extra; the change is refunded</span></div>` : ""}
+    </div>`;
+  }).join("") : '<p class="note">No tabs yet. Open one on the right.</p>';
+  document.querySelectorAll("[data-pay]").forEach(b => b.onclick = () => call(TABREALM, "Pay", [b.dataset.pay], Math.ceil(+b.dataset.due * 1.02)));
+
+  $("code").textContent = `import (
+    "gno.land/r/${CONFIG.ns}/tapster/v0"
+    "gno.land/p/${CONFIG.ns}/tapmath/v0"
+)
+
+func init(cur realm) {
+    tapster.RegisterConsumer(cross(cur), "what my realm does")
+}
+
+func Checkout(cur realm, usdCents int64) {
+    // Never price money on data older than 10 minutes.
+    price, dec := tapster.MustPriceFresh("GNOT-USD", 600)
+    due := tapmath.UsdCentsToUgnot(usdCents, price, dec) // rounds up
+    // ... require -send >= due, then settle
+}`;
+  $("jsonpath").textContent = `${TAPSTER}:json`;
+  $("realm-link").href = `${CONFIG.gnoweb}/r/${CONFIG.ns}/tapster/v0`; $("realm-link").textContent = `r/${short(CONFIG.ns)}/tapster/v0`;
+  $("tab-link").href = `${CONFIG.gnoweb}/r/${CONFIG.ns}/tab/v0`; $("tab-link").textContent = `r/${short(CONFIG.ns)}/tab/v0`;
+  $("net").textContent = (S.demo ? "demo · " : "") + CONFIG.chainId;
+}
+
+// ---------------------------------------------------------------------------
+// Wallet (Adena)
+async function connect() {
+  if (!window.adena) { toast('Adena wallet not found. <a style="color:#fde68a" href="https://adena.app" target="_blank" rel="noopener">Install Adena</a> and reload.'); return false; }
+  const r = await window.adena.AddEstablish("Tapster");
+  if (r.status !== "success" && r.type !== "ALREADY_CONNECTED") { toast("Connection refused"); return false; }
+  const acc = await window.adena.GetAccount();
+  S.account = acc?.data?.address;
+  if (acc?.data?.chainId && acc.data.chainId !== CONFIG.chainId) {
+    try { await window.adena.SwitchNetwork(CONFIG.chainId); } catch {}
+  }
+  $("connect").textContent = short(S.account);
+  draw();
+  return true;
+}
+async function call(pkg, func, args, sendUgnot) {
+  if (S.demo) { toast("Demo mode: connect to a deployed realm to send transactions."); return; }
+  if (!S.account && !(await connect())) return;
+  toast(`Confirm <b>${func}</b> in Adena…`, 20000);
+  try {
+    const res = await window.adena.DoContract({
+      messages: [{ type: "/vm.m_call", value: { caller: S.account, send: sendUgnot ? `${sendUgnot}ugnot` : "", pkg_path: pkg, func, args: args.map(String) } }],
+      gasFee: 40000, gasWanted: 30000000, memo: "",
+    });
+    if (res.status === "success") { toast(`✅ ${func} confirmed`); setTimeout(load, 1500); }
+    else toast(`❌ ${esc(res.message || res.type || "failed")}`, 9000);
+  } catch (e) { toast(`❌ ${esc(e.message || e)}`, 9000); }
+}
+$("connect").onclick = connect;
+$("f-stake").onsubmit = (e) => { e.preventDefault(); call(TAPSTER, "Stake", [e.target.name.value.trim()], Math.round(+e.target.amt.value*1e6)); };
+$("b-claim").onclick = () => call(TAPSTER, "ClaimRewards", []);
+$("b-exit").onclick = () => { if (confirm("Stop reporting and start unbonding? Your stake stays slashable until it ends.")) call(TAPSTER, "RequestExit", []); };
+$("b-withdraw").onclick = () => call(TAPSTER, "Withdraw", []);
+$("f-submit").onsubmit = (e) => { e.preventDefault(); const f = S.feeds[e.target.pair.value]; call(TAPSTER, "Submit", [f.pair, Math.round(+e.target.price.value * 10**f.decimals)]); };
+$("f-open").onsubmit = (e) => { e.preventDefault(); call(TABREALM, "Open", [e.target.title.value.trim()]); };
+$("f-add").onsubmit = (e) => { e.preventDefault(); call(TABREALM, "Add", [e.target.id.value, e.target.name.value.trim(), Math.round(+e.target.usd.value*100)]); };
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on", x===b));
+  document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+b.dataset.v));
+});
+
+// ---------------------------------------------------------------------------
+// Demo data, shaped exactly like the realm's JSON, used only when the realm
+// cannot be reached (so the page is never empty for a reviewer).
+function loadDemo() {
+  S.demo = true;
+  const now = Math.floor(Date.now()/1000);
+  const mk = (pair, base, vol) => { let p = base; const history = []; for (let i=40;i>0;i--){ p *= 1 + (Math.random()-.5)*vol; history.push([now - i*300, Math.round(p*1e6)]); }
+    return {pair, decimals:6, price:history.at(-1)[1], updatedAt: now-40, round: Math.floor(now/300), reports:3, spreadBps:12, pool: 20000000, roundSecs:300, minReports:2, paused:false, hasAnswer:true, history,
+      lastRound:[{name:"Lagos Tap",price:history.at(-1)[1],weight:5e6,devBps:0,outcome:"accurate"},{name:"Ife Node",price:Math.round(history.at(-1)[1]*1.0004),weight:3e6,devBps:4,outcome:"accurate"},{name:"Shady Sam",price:Math.round(history.at(-1)[1]*1.3),weight:1e6,devBps:3000,outcome:"outlier"}]}; };
+  S.feeds = Object.fromEntries([mk("BTC-USD",60200,.004),mk("ETH-USD",1690,.006),mk("GNOT-USD",0.0498,.01),mk("XAU-USD",3568,.002)].map(f=>[f.pair,f]));
+  S.reporters = {minStake:1e6,totalSlashed:150000,totalRewards:96000,consumers:"gno.land/r/demo/tab/v0",
+    reporters:[{address:"g1grzw90hv080mdqrwx26q0dv58u5sx7v05kqtec",name:"Lagos Tap",stake:5e6,rewards:48000,earned:48000,reports:24,accurate:24,outliers:0,slashed:0,exitAt:0,active:true},
+      {address:"g1z8fg0x6txzsg7ywzlpdcjrla9gsq7tn6thqv4h",name:"Ife Node",stake:3e6,rewards:46000,earned:46000,reports:24,accurate:23,outliers:0,slashed:0,exitAt:0,active:true},
+      {address:"g1dn2guqy00ggg83v95mxx8pdt6l0x2jler3shg2",name:"Shady Sam",stake:850000,rewards:2000,earned:2000,reports:4,accurate:1,outliers:3,slashed:150000,exitAt:0,active:false}],
+    events:[{at:now-60,kind:"slash",text:"Shady Sam slashed 0.050 GNOT on GNOT-USD: reported 0.064870 vs answer 0.049900 (30.00% off)"},{at:now-900,kind:"consumer",text:"gno.land/r/demo/tab/v0 started using Tapster"},{at:now-1800,kind:"fund",text:"g1hy7sn2…2es7 funded GNOT-USD with 20.000 GNOT"}]};
+  S.tabs = {settledCents:2200, tabs:[{id:2,title:"Saturday crew",bartender:"g1xd9mvd3zr2qcjt3rv4zjm2ll9e8uqsa3y6qmyq",total:1600,paid:false,items:[{name:"Ale x4",cents:1600}]},{id:1,title:"Friday at the Tavern",bartender:"g1xd9mvd3zr2qcjt3rv4zjm2ll9e8uqsa3y6qmyq",total:2200,paid:true,payer:"g1hy7sn22qhc8esls3ul9j40pxe22jvqlkz52es7",paidUgnot:441767068,paidPrice:49800,items:[{name:"Mead",cents:650},{name:"Roast chicken",cents:1200},{name:"Bread",cents:350}]}]};
+}
+
+load();
+setInterval(load, 20000);
+setInterval(() => { if (Object.keys(S.feeds).length) draw(); }, 5000);
+</script>
+</body>
+</html>

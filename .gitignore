@@ -1,0 +1,5 @@
+bin/
+dist/
+bot/.env
+shots/
+*.bak
