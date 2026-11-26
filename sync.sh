@@ -7,3 +7,4 @@ mkdir -p $EX/p/tapsterns $EX/r/tapsterns
 cp -r /home/claude/tapster/gno/p/tapmath $EX/p/tapsterns/tapmath
 cp -r /home/claude/tapster/gno/r/tapster $EX/r/tapsterns/tapster
 cp -r /home/claude/tapster/gno/r/tab $EX/r/tapsterns/tab
+cp -r /home/claude/tapster/gno/r/lastcall $EX/r/tapsterns/lastcall

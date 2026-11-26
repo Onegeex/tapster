@@ -11,7 +11,8 @@ Crypto / Web3 · DeFi · Gno · Infrastructure
 
 ## Links (fill after deploy)
 - Oracle realm (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/tapster/v0
-- Demo consumer (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/tab/v0
+- Last Call game (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/lastcall/v0
+- Tab (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/tab/v0
 - Math package: https://onyx.testnets.gno.land/p/<ADDR>/tapmath/v0
 - Web app: <hosted URL>?ns=<ADDR>
 - Repository: https://github.com/<you>/tapster
@@ -31,6 +32,8 @@ Crypto / Web3 · DeFi · Gno · Infrastructure
 
 **Proof it's useful: Tab.** A second realm imports Tapster to run bar tabs priced in dollars and paid in GNOT. At payment time it converts the bill at the live price, refuses stale data, pays the bartender exactly what is due and refunds the rest. Tab registers itself on-chain as a Tapster consumer, which the oracle's page lists under "Used by".
 
+**Proof it's fun: Last Call.** A third realm turns the oracle into a game. Will GNOT, BTC, ETH or gold be higher or lower in about 15 minutes? Bet GNOT on UP or DOWN, and the game settles automatically on Tapster prices. Anyone can settle for a 0.5% tip, winners split the pot, and there is no house edge. Ties and one-sided games are refunded. Every bet, settle and claim is an on-chain transaction from a real user, which is exactly what the Builder Retention metrics count.
+
 **Built the Gno way.**
 - The realm renders its own dashboard on gnoweb: feed table with SVG sparklines, per-feed price chart, last round's reports with accurate/slashed badges, reporter leaderboard, activity log and an integration guide. Every action has a transaction link.
 - `p/tapmath` is a reusable, float-free package: weighted median, deviation in basis points, payer-safe USD↔ugnot conversion.
@@ -40,7 +43,7 @@ Crypto / Web3 · DeFi · Gno · Infrastructure
 - A no-dependency Node reporter bot. It takes the median of CoinGecko, Kraken, Coinbase, OKX and KuCoin, and skips any round where the exchanges disagree, so honest reporters are never slashed for a bad source. A chaos mode demonstrates slashing live.
 - A web app that reads the chain over RPC and signs with Adena: live cards, interactive charts, staking, claiming, funding and the Tab flow.
 - A one-command `deploy.sh` that verifies gnokey's checksum, deploys in dependency order and waits for onyx's approver.
-- 28 tests across the three packages, plus a full run on a local chain: 3 reporters over many rounds, a live slash that dropped the liar below minimum stake and locked him out, and a Tab paid with exact on-chain balances.
+- 34 tests across the four packages, plus a full run on a local chain: 3 reporters over many rounds, a live slash that dropped the liar below minimum stake and locked him out, and a Tab paid with exact on-chain balances.
 
 **After the hackathon (Builder Retention).** Deploy to mainnet, publish monthly releases, add pairs (SOL, NGN-USD, a USDC peg monitor) and a TWAP client package. Onboard other builders as consumers; the wagers, bounty and game realms in this hackathon can all price in dollars with one import.
 
@@ -65,6 +68,7 @@ Record with QuickTime (File → New Screen Recording). Keep the bot running with
 | 1:00 | gnoweb `:feed/GNOT-USD`, last round table | "Each round, the answer is the stake-weighted median. Reporters within 1% earn. This one reported 30% high…" |
 | 1:15 | Slashed badge + Recent slashes + `:reporters` | "…and lost 5% of his stake, which went into the reward pool. Honest reporters are paid by dishonest ones. Drop below the minimum and you're locked out." |
 | 1:40 | Code: `Withdraw` + `settlePending` | "You can't lie and leave: stake stays slashable while unbonding, and withdraw settles your open rounds first." |
+| 1:50 | Web app Last Call: bet UP, then Settle + Claim | "And a game on top: higher or lower in 15 minutes, settled by Tapster prices. No house, no keeper. Whoever settles earns the tip." |
 | 2:00 | Web app Tab demo: open, add items, Pay in Adena | "Here's a realm using it. Tab prices a bar bill in dollars, converts at the live GNOT price, refuses stale data, pays the bartender exactly and refunds the change." |
 | 2:30 | gnoweb `:integrate` | "Integrating takes two imports and one call: MustPriceFresh. Your realm can register as a consumer on-chain." |
 | 2:45 | Feed cards | "Tapster: price feeds on tap for gno.land. Next is mainnet, more pairs and more consumers." |

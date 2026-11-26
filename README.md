@@ -8,7 +8,8 @@ gno.land has a DEX, wallets, DAOs and plenty of escrow apps, but no general pric
 |---|---|
 | Oracle realm | `gno.land/r/<deployer>/tapster/v0` |
 | Math package | `gno.land/p/<deployer>/tapmath/v0` |
-| Demo consumer | `gno.land/r/<deployer>/tab/v0` |
+| Consumer: Last Call | `gno.land/r/<deployer>/lastcall/v0` |
+| Consumer: Tab | `gno.land/r/<deployer>/tab/v0` |
 | Network | Onyx testnet (`onyx-1`) |
 | Feeds | GNOT-USD, BTC-USD, ETH-USD, XAU-USD (gold) |
 
@@ -66,7 +67,22 @@ func Checkout(cur realm, usdCents int64) {
 
 Off-chain clients can read JSON from `Render`: `:json`, `:json/<PAIR>` and `:json/reporters`.
 
-## Tab: the demo consumer
+## Last Call: a prediction game on Tapster prices
+
+`r/lastcall` asks one question per feed: **will the price be higher or lower in about 15 minutes?**
+
+- Every new Tapster answer opens a game. While that answer is the latest one, anyone can bet GNOT on UP or DOWN (0.1–100 GNOT).
+- The game settles on a Tapster answer at least 3 oracle rounds later. Anyone can call `Settle` and earns 0.5% of the pot (max 1 GNOT), so no keeper is needed.
+- Winners split the whole pot in proportion to their stakes. There is no house edge.
+- Ties, one-sided games and games left unsettled for 12 rounds are refunded in full.
+- Payout math is bounded (100 GNOT per bet, 10,000 GNOT per pot) so it can never overflow. Bets check `IsUserCall` together with `OriginSend`, and validation happens before any write.
+- The gnoweb page shows open games with live payout multipliers, one-click bet links, games ready to settle, recent results and a profit leaderboard. `:player/<address>` lists a player's bets with claim links.
+
+On a live chain, three players bet 3 UP and 1 UP against 2 DOWN. GNOT moved $0.050172 → $0.050054, DOWN won, the settler earned 0.03 GNOT and the DOWN bettor claimed 5.97 GNOT. Claims on the losing bets were refused.
+
+![Last Call on gnoweb](docs/screenshots/lastcall.png)
+
+## Tab: priced in dollars, paid in GNOT
 
 `r/tab` is a bar tab priced in US dollars and paid in GNOT. A bartender opens a tab and adds items in cents. When a customer pays, the realm:
 
@@ -99,7 +115,8 @@ Every action has a transaction link, so the whole protocol can be used from gnow
 ```
 gno/p/tapmath/   pure math: weighted median, deviation, USD<->ugnot, formatting (+10 tests)
 gno/r/tapster/   the oracle realm: staking, rounds, slashing, rewards, reads, gnoweb UI (+14 tests)
-gno/r/tab/       demo consumer realm (+4 tests, incl. exact coin balances)
+gno/r/tab/       consumer: bar tabs in USD paid in GNOT (+4 tests, incl. exact coin balances)
+gno/r/lastcall/  consumer: UP/DOWN prediction game settled by Tapster (+6 tests)
 bot/             reporter bot (Node 18+, no dependencies)
 web/index.html   web app: live feeds, charts, staking and Tab flows via Adena
 deploy.sh        one-command deploy to onyx-1
@@ -135,10 +152,10 @@ Open `dist/index.html` (written by `deploy.sh`), or host `web/index.html` anywhe
 ### Tests
 
 ```sh
-gno test ./gno/p/tapmath ./gno/r/tapster ./gno/r/tab
+gno test ./gno/p/tapmath ./gno/r/tapster ./gno/r/tab ./gno/r/lastcall
 ```
 
-The 28 tests cover the median and weighted median, the conversions, the staking rules and the code-realm payment bypass. They also cover rewards and slashing, stake weight beating cheap liars, quorum, lazy finalization, freshness, the unbonding and open-round escape, admin bounds, rendering and Tab payments with exact balances.
+The 34 tests cover the median and weighted median, the conversions, the staking rules and the code-realm payment bypass. They also cover rewards and slashing, stake weight beating cheap liars, quorum, lazy finalization, freshness, the unbonding and open-round escape, admin bounds, rendering, Tab payments with exact balances, and every Last Call path: pari-mutuel payouts, settler tips, tie, one-sided and expiry refunds, stale-price blocking and overflow bounds.
 
 ## Roadmap
 

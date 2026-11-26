@@ -105,6 +105,7 @@
   <nav class="tabs" id="tabs">
     <button data-v="feeds" class="on">Feeds</button>
     <button data-v="reporters">Reporters</button>
+    <button data-v="lastcall">🔔 Last Call</button>
     <button data-v="tab">Tab demo</button>
     <button data-v="activity">Activity</button>
     <button data-v="integrate">Integrate</button>
@@ -143,6 +144,19 @@
           </form>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-lastcall">
+    <div class="panel">
+      <h2>🔔 Last Call: higher or lower in ~15 minutes?</h2>
+      <p class="note">Bet GNOT on UP or DOWN. Each game opens on Tapster's latest answer and settles on an answer at least 3 oracle rounds later. Winners split the pot, there is no house edge, and whoever settles earns 0.5%. Ties and one-sided games are refunded.</p>
+      <div class="row" style="align-items:center;gap:8px;margin:8px 0"><label for="lc-amt">Stake (GNOT)</label><input id="lc-amt" type="number" min="0.1" max="100" step="0.1" value="1" style="max-width:120px"><span class="note" id="lc-stats"></span></div>
+      <div class="grid" id="lc-open"></div>
+    </div>
+    <div class="row">
+      <div class="col"><div class="panel"><h2>Ready to settle</h2><div id="lc-ready" class="note"></div><h3>Recent results</h3><div id="lc-results"></div></div></div>
+      <div class="col"><div class="panel"><h2>Your bets</h2><div id="lc-mine" class="note">Connect Adena to see your bets.</div></div></div>
     </div>
   </section>
 
@@ -211,6 +225,7 @@ const qs = new URLSearchParams(location.search);
 for (const [k, q] of [["ns","ns"],["rpc","rpc"],["chainId","chain"],["gnoweb","web"]]) if (qs.get(q)) CONFIG[k] = qs.get(q);
 const TAPSTER = `gno.land/r/${CONFIG.ns}/tapster/v0`;
 const TABREALM = `gno.land/r/${CONFIG.ns}/tab/v0`;
+const LASTCALL = `gno.land/r/${CONFIG.ns}/lastcall/v0`;
 
 // ---------------------------------------------------------------------------
 // Chain reads
@@ -298,6 +313,7 @@ async function load() {
     S.feeds = Object.fromEntries(detailed.map(f => [f.pair, f]));
     S.reporters = await render(TAPSTER, "json/reporters");
     try { S.tabs = await render(TABREALM, "json"); } catch { S.tabs = null; }
+    try { S.lc = await render(LASTCALL, "json"); } catch { S.lc = null; }
     S.demo = false; $("banner").style.display = "none";
   } catch (e) {
     if (!Object.keys(S.feeds).length) { loadDemo(); }
@@ -374,6 +390,8 @@ function draw() {
   }).join("") : '<p class="note">No tabs yet. Open one on the right.</p>';
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = () => call(TABREALM, "Pay", [b.dataset.pay], Math.ceil(+b.dataset.due * 1.02)));
 
+  drawLastCall();
+
   $("code").textContent = `import (
     "gno.land/r/${CONFIG.ns}/tapster/v0"
     "gno.land/p/${CONFIG.ns}/tapmath/v0"
@@ -393,6 +411,44 @@ func Checkout(cur realm, usdCents int64) {
   $("realm-link").href = `${CONFIG.gnoweb}/r/${CONFIG.ns}/tapster/v0`; $("realm-link").textContent = `r/${short(CONFIG.ns)}/tapster/v0`;
   $("tab-link").href = `${CONFIG.gnoweb}/r/${CONFIG.ns}/tab/v0`; $("tab-link").textContent = `r/${short(CONFIG.ns)}/tab/v0`;
   $("net").textContent = (S.demo ? "demo · " : "") + CONFIG.chainId;
+}
+
+// ---------------------------------------------------------------------------
+// Last Call
+function mult(side, other) {
+  if (!side) return other ? "first bet takes the pot" : "—";
+  if (!other) return "no takers yet";
+  const tot = side + other; return ((tot - Math.floor(tot*50/10000)) / side).toFixed(2) + "x";
+}
+const outcomeLabel = (o) => ({up:"⬆ UP won", down:"⬇ DOWN won", tie:"= tie, refunded", "one-sided":"one-sided, refunded", expired:"expired, refunded", open:"open"}[o] || o);
+function drawLastCall() {
+  const L = S.lc || {list:[], games:0, bets:0, volume:0, settleAfter:3};
+  $("lc-stats").textContent = `${L.games} games · ${L.bets} bets · ${gnot(L.volume)} GNOT wagered`;
+  const byKey = Object.fromEntries((L.list||[]).map(g => [g.pair+":"+g.round, g]));
+  $("lc-open").innerHTML = Object.values(S.feeds).map(f => {
+    const fresh = f.hasAnswer && (Date.now()/1000 - f.updatedAt) <= 600;
+    const g = byKey[f.pair+":"+f.round] || {upPot:0, downPot:0};
+    return `<div class="card" style="cursor:default"><div class="pair"><span>${f.pair}</span><span class="meta">round ${f.round||"–"}</span></div>
+      <div class="price">${f.hasAnswer ? fmtPrice(f.price, f.decimals) : "—"}</div>
+      <div class="meta">UP ${gnot(g.upPot)} (${mult(g.upPot,g.downPot)}) · DOWN ${gnot(g.downPot)} (${mult(g.downPot,g.upPot)})</div>
+      ${fresh ? `<div class="row" style="gap:6px;margin-top:8px"><button class="btn small" data-bet="${f.pair}" data-up="1">⬆ UP</button><button class="btn small ghost" data-bet="${f.pair}" data-up="0">⬇ DOWN</button></div>` : `<div class="meta" style="margin-top:8px">${f.hasAnswer ? "price stale: betting paused" : "waiting for Tapster"}</div>`}
+    </div>`;
+  }).join("");
+  document.querySelectorAll("[data-bet]").forEach(b => b.onclick = () => call(LASTCALL, "Bet", [b.dataset.bet, b.dataset.up === "1" ? "true" : "false"], Math.round(+$("lc-amt").value * 1e6)));
+
+  const ready = (L.list||[]).filter(g => g.outcome === "open" && S.feeds[g.pair] && S.feeds[g.pair].round >= g.settleAt);
+  $("lc-ready").innerHTML = ready.length ? ready.map(g => `<div class="event">${g.pair} round ${g.round} · pot ${gnot(g.upPot+g.downPot)} GNOT <button class="btn small" data-settle="${g.pair}|${g.round}">Settle (+0.5%)</button></div>`).join("") : "Nothing to settle right now.";
+  document.querySelectorAll("[data-settle]").forEach(b => b.onclick = () => { const [p, r] = b.dataset.settle.split("|"); call(LASTCALL, "Settle", [p, r]); });
+
+  const done = (L.list||[]).filter(g => g.outcome !== "open").slice(0, 10);
+  $("lc-results").innerHTML = done.length ? `<table><thead><tr><th>Feed</th><th>Open → Close</th><th>Result</th><th>Pot</th></tr></thead><tbody>${done.map(g => `<tr><td>${g.pair}</td><td class="num">${fmtPrice(g.startPrice,g.decimals)} → ${fmtPrice(g.endPrice,g.decimals)}</td><td>${outcomeLabel(g.outcome)}</td><td class="num">${gnot(g.upPot+g.downPot)}</td></tr>`).join("")}</tbody></table>` : '<p class="note">No settled games yet.</p>';
+
+  if (S.account) {
+    const mine = [];
+    for (const g of (L.list||[])) for (const b of g.bets) if (b.addr === S.account) mine.push({g, b});
+    $("lc-mine").innerHTML = mine.length ? mine.map(({g,b}) => `<div class="event">${g.pair} r${g.round} · ${b.up?"⬆ UP":"⬇ DOWN"} ${gnot(b.amount)} GNOT · ${outcomeLabel(g.outcome)} ${b.owed>0?`<button class="btn small" data-claim="${g.pair}|${g.round}">Claim ${gnot(b.owed)} GNOT</button>`: b.claimed?"· claimed":""}</div>`).join("") : "No bets yet.";
+    document.querySelectorAll("[data-claim]").forEach(x => x.onclick = () => { const [p, r] = x.dataset.claim.split("|"); call(LASTCALL, "Claim", [p, r]); });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -451,6 +507,10 @@ function loadDemo() {
       {address:"g1z8fg0x6txzsg7ywzlpdcjrla9gsq7tn6thqv4h",name:"Ife Node",stake:3e6,rewards:46000,earned:46000,reports:24,accurate:23,outliers:0,slashed:0,exitAt:0,active:true},
       {address:"g1dn2guqy00ggg83v95mxx8pdt6l0x2jler3shg2",name:"Shady Sam",stake:850000,rewards:2000,earned:2000,reports:4,accurate:1,outliers:3,slashed:150000,exitAt:0,active:false}],
     events:[{at:now-60,kind:"slash",text:"Shady Sam slashed 0.050 GNOT on GNOT-USD: reported 0.064870 vs answer 0.049900 (30.00% off)"},{at:now-900,kind:"consumer",text:"gno.land/r/demo/tab/v0 started using Tapster"},{at:now-1800,kind:"fund",text:"g1hy7sn2…2es7 funded GNOT-USD with 20.000 GNOT"}]};
+  S.lc = {games:12, bets:41, volume:58500000, settleAfter:3, list:[
+    {pair:"GNOT-USD", round:S.feeds["GNOT-USD"].round, startPrice:S.feeds["GNOT-USD"].price, decimals:6, upPot:4000000, downPot:2500000, outcome:"open", settleAt:S.feeds["GNOT-USD"].round+3, bets:[]},
+    {pair:"BTC-USD", round:S.feeds["BTC-USD"].round-4, startPrice:60150000000, decimals:6, upPot:3000000, downPot:2000000, outcome:"up", endPrice:60310000000, settleAt:0, bets:[]},
+    {pair:"GNOT-USD", round:S.feeds["GNOT-USD"].round-6, startPrice:50172, decimals:6, upPot:4000000, downPot:2000000, outcome:"down", endPrice:50054, settleAt:0, bets:[]}]};
   S.tabs = {settledCents:2200, tabs:[{id:2,title:"Saturday crew",bartender:"g1xd9mvd3zr2qcjt3rv4zjm2ll9e8uqsa3y6qmyq",total:1600,paid:false,items:[{name:"Ale x4",cents:1600}]},{id:1,title:"Friday at the Tavern",bartender:"g1xd9mvd3zr2qcjt3rv4zjm2ll9e8uqsa3y6qmyq",total:2200,paid:true,payer:"g1hy7sn22qhc8esls3ul9j40pxe22jvqlkz52es7",paidUgnot:441767068,paidPrice:49800,items:[{name:"Mead",cents:650},{name:"Roast chicken",cents:1200},{name:"Bread",cents:350}]}]};
 }
 

@@ -81,12 +81,13 @@ ADMIN="$(ensure_key "$KEY")"
 TAPMATH="gno.land/p/$ADMIN/tapmath/v0"
 TAPSTER="gno.land/r/$ADMIN/tapster/v0"
 TAB="gno.land/r/$ADMIN/tab/v0"
+LASTCALL="gno.land/r/$ADMIN/lastcall/v0"
 
 show_status() {
-  for p in "$TAPMATH" "$TAPSTER" "$TAB"; do
+  for p in "$TAPMATH" "$TAPSTER" "$TAB" "$LASTCALL"; do
     s="$(pkg_status "$p")"; printf "  %-70s %s\n" "$p" "${s:-unknown}"
   done
-  echo "  Refusal reasons, if any: $GPAS/status/<package path>"
+  echo "  Approver verdicts: https://gpas.latest.testnets.gno.land/?path=<package path>"
 }
 
 if [ "${1:-}" = "status" ]; then show_status; exit 0; fi
@@ -125,7 +126,7 @@ done
 # ---------------------------------------------------------------------------
 # Build: rewrite namespace and admin
 rm -rf dist && mkdir -p dist
-cp -R gno/p/tapmath dist/tapmath; cp -R gno/r/tapster dist/tapster; cp -R gno/r/tab dist/tab
+cp -R gno/p/tapmath dist/tapmath; cp -R gno/r/tapster dist/tapster; cp -R gno/r/tab dist/tab; cp -R gno/r/lastcall dist/lastcall
 find dist -type f \( -name '*.gno' -o -name 'gnomod.toml' \) -print0 | xargs -0 sed -i.bak "s#gno.land/p/tapsterns/#gno.land/p/$ADMIN/#g; s#gno.land/r/tapsterns/#gno.land/r/$ADMIN/#g"
 sed -i.bak "s#var admin address = \"ADMIN_PLACEHOLDER\"#var admin address = \"$ADMIN\"#" dist/tapster/tapster.gno
 find dist -name '*.bak' -delete
@@ -148,12 +149,13 @@ deploy() {
 deploy dist/tapmath "$TAPMATH"
 deploy dist/tapster "$TAPSTER"
 deploy dist/tab "$TAB"
+deploy dist/lastcall "$LASTCALL"
 
 bold "Waiting for the testnet approver to enable the packages (usually seconds to minutes)…"
 for i in $(seq 1 60); do
-  a="$(pkg_status "$TAPMATH")"; b="$(pkg_status "$TAPSTER")"; c="$(pkg_status "$TAB")"
-  printf "\r  tapmath=%-8s tapster=%-8s tab=%-8s" "${a:-?}" "${b:-?}" "${c:-?}"
-  [ "$a" = "live" ] && [ "$b" = "live" ] && [ "$c" = "live" ] && break
+  a="$(pkg_status "$TAPMATH")"; b="$(pkg_status "$TAPSTER")"; c="$(pkg_status "$TAB")"; d="$(pkg_status "$LASTCALL")"
+  printf "\r  tapmath=%-8s tapster=%-8s tab=%-8s lastcall=%-8s" "${a:-?}" "${b:-?}" "${c:-?}" "${d:-?}"
+  [ "$a" = "live" ] && [ "$b" = "live" ] && [ "$c" = "live" ] && [ "$d" = "live" ] && break
   sleep 10
 done
 echo
@@ -178,5 +180,6 @@ fi
 bold "Done."
 echo "  Oracle:   $GNOWEB/r/$ADMIN/tapster/v0"
 echo "  Tab demo: $GNOWEB/r/$ADMIN/tab/v0"
+echo "  Last Call: $GNOWEB/r/$ADMIN/lastcall/v0"
 echo "  Web app:  dist/index.html (or any host with ?ns=$ADMIN)"
 echo "  Next:     ./deploy.sh reporters   then   cd bot && node reporter.mjs"
