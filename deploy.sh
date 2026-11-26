@@ -133,7 +133,7 @@ find dist -name '*.bak' -delete
 # typecheck and enable gas well under the testnet approver's limit.
 find dist -name '*_test.gno' -delete
 grep -q "\"$ADMIN\"" dist/tapster/tapster.gno || die "admin address was not written"
-sed "s#TAPSTER_NAMESPACE#$ADMIN#" web/index.html > dist/index.html
+cp web/index.html dist/index.html; sed "s#TAPSTER_NAMESPACE#$ADMIN#" web/config.js > dist/config.js
 
 # ---------------------------------------------------------------------------
 # Submit

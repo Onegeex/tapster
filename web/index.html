@@ -195,6 +195,7 @@
 </footer>
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script>
 // ---------------------------------------------------------------------------
 // Configuration. deploy.sh writes the namespace (your g1 address) here; it
@@ -205,6 +206,7 @@ const CONFIG = {
   chainId: "onyx-1",
   gnoweb: "https://onyx.testnets.gno.land",
 };
+Object.assign(CONFIG, window.TAPSTER_CONFIG || {});
 const qs = new URLSearchParams(location.search);
 for (const [k, q] of [["ns","ns"],["rpc","rpc"],["chainId","chain"],["gnoweb","web"]]) if (qs.get(q)) CONFIG[k] = qs.get(q);
 const TAPSTER = `gno.land/r/${CONFIG.ns}/tapster/v0`;
