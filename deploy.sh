@@ -90,11 +90,21 @@ show_status() {
   echo "  Approver verdicts: https://gpas.latest.testnets.gno.land/?path=<package path>"
 }
 
+# write_bot_env KEYS: point bot/.env at this realm and these reporter keys.
+write_bot_env() {
+  [ -f bot/.env ] || cp bot/.env.example bot/.env
+  local tmp; tmp="$(mktemp)"
+  grep -v -E '^(TAPSTER_REALM|REPORTER_KEYS)=|^KEY_PASSWORD=$' bot/.env > "$tmp" || true
+  { echo "TAPSTER_REALM=$TAPSTER"; echo "REPORTER_KEYS=$1"; cat "$tmp"; } > bot/.env
+  rm -f "$tmp"
+}
+
 if [ "${1:-}" = "status" ]; then show_status; exit 0; fi
 
 # ---------------------------------------------------------------------------
 # Extra reporters (optional, for a livelier demo)
 if [ "${1:-}" = "reporters" ]; then
+  echo "Creating reporter keys. Use the SAME password as $KEY so the bot can unlock all of them."
   for n in tapster-r2 tapster-r3; do
     a="$(ensure_key "$n")"; b="$(balance "$a")"
     if [ "${b:-0}" -lt 3500000 ]; then
@@ -106,7 +116,9 @@ if [ "${1:-}" = "reporters" ]; then
     tx call -pkgpath "$TAPSTER" -func Stake -args "$n" -send 2000000ugnot \
       -gas-fee "$GAS_FEE" -gas-wanted "$GAS_WANTED" -broadcast -chainid "$CHAIN_ID" -remote "$RPC" "$n"
   done
-  bold "Done. Add them to bot/.env: REPORTER_KEYS=$KEY,tapster-r2,tapster-r3"
+  write_bot_env "$KEY,tapster-r2,tapster-r3"
+  bold "Done. The bot will report with $KEY, tapster-r2 and tapster-r3."
+  echo "  Start it with:  cd bot && node reporter.mjs"
   exit 0
 fi
 
@@ -175,7 +187,7 @@ if [ "$(pkg_status "$TAPSTER")" = "live" ]; then
   fi
 fi
 
-[ -f bot/.env ] || sed "s#^TAPSTER_REALM=.*#TAPSTER_REALM=$TAPSTER#; s#^REPORTER_KEYS=.*#REPORTER_KEYS=$KEY#" bot/.env.example > bot/.env
+grep -q "^REPORTER_KEYS=.*tapster-r2" bot/.env 2>/dev/null || write_bot_env "$KEY"
 
 bold "Done."
 echo "  Oracle:   $GNOWEB/r/$ADMIN/tapster/v0"

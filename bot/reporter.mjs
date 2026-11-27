@@ -259,6 +259,35 @@ function loadEnv(file) {
   }
 }
 
+// Ask for the key password when it is not configured (input hidden).
+async function askPassword(prompt) {
+  if (!process.stdin.isTTY) return "";
+  process.stdout.write(prompt);
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  return new Promise((resolve) => {
+    let pw = "";
+    const onData = (b) => {
+      for (const ch of b.toString("utf8")) {
+        if (ch === "\r" || ch === "\n") {
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdin.off("data", onData);
+          process.stdout.write("\n");
+          return resolve(pw);
+        }
+        if (ch === "\u0003") process.exit(1); // Ctrl-C
+        if (ch === "\u007f") pw = pw.slice(0, -1);
+        else pw += ch;
+      }
+    };
+    process.stdin.on("data", onData);
+  });
+}
+if (process.env.KEY_PASSWORD === undefined && !DRY) {
+  cfg.password = await askPassword(`Password for ${cfg.keys.join(", ")} (hidden; press Enter if none): `);
+}
+
 log(`Tapster reporter: ${cfg.keys.join(", ")} -> ${cfg.realm} on ${cfg.chainId}${DRY ? " (dry run)" : ""}`);
 if (ONCE) {
   await tick();
