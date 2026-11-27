@@ -94,7 +94,7 @@ show_status() {
 write_bot_env() {
   [ -f bot/.env ] || cp bot/.env.example bot/.env
   local tmp; tmp="$(mktemp)"
-  grep -v -E '^(TAPSTER_REALM|REPORTER_KEYS)=|^KEY_PASSWORD=$' bot/.env > "$tmp" || true
+  grep -v -E '^(TAPSTER_REALM|REPORTER_KEYS)=|^KEY_PASSWORD=$|^GNOKEY=$' bot/.env > "$tmp" || true
   { echo "TAPSTER_REALM=$TAPSTER"; echo "REPORTER_KEYS=$1"; cat "$tmp"; } > bot/.env
   rm -f "$tmp"
 }

@@ -22,7 +22,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 loadEnv(join(here, ".env"));
 
 const cfg = {
-  gnokey: process.env.GNOKEY || "gnokey",
+  // deploy.sh downloads gnokey into ../bin; use it when gnokey is not set.
+  gnokey: process.env.GNOKEY || (existsSync(join(here, "..", "bin", "gnokey")) ? join(here, "..", "bin", "gnokey") : "gnokey"),
   home: process.env.GNOKEY_HOME || "",
   keys: (process.env.REPORTER_KEYS || "tapster-admin").split(",").map((s) => s.trim()).filter(Boolean),
   password: process.env.KEY_PASSWORD ?? "",
@@ -289,6 +290,8 @@ if (process.env.KEY_PASSWORD === undefined && !DRY) {
 }
 
 log(`Tapster reporter: ${cfg.keys.join(", ")} -> ${cfg.realm} on ${cfg.chainId}${DRY ? " (dry run)" : ""}`);
+log(`gnokey: ${cfg.gnokey}`);
+if (cfg.keys.length < 2) log("note: feeds need 2 reports per round; run ../deploy.sh reporters to add tapster-r2 and tapster-r3");
 if (ONCE) {
   await tick();
 } else {
