@@ -10,12 +10,12 @@ Staked, slashable price feeds for gno.land: reporters earn for accuracy, lose st
 Crypto / Web3 · DeFi · Gno · Infrastructure
 
 ## Links (fill after deploy)
-- Oracle realm (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/tapster/v0
-- Last Call game (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/lastcall/v0
-- Tab (gnoweb): https://onyx.testnets.gno.land/r/<ADDR>/tab/v0
-- Math package: https://onyx.testnets.gno.land/p/<ADDR>/tapmath/v0
-- Web app: <hosted URL>?ns=<ADDR>
-- Repository: https://github.com/<you>/tapster
+- Oracle realm (gnoweb): https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapster/v0
+- Last Call game (gnoweb): https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/lastcall/v0
+- Tab (gnoweb): https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tab/v0
+- Math package: https://onyx.testnets.gno.land/p/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapmath/v0
+- Web app: https://tapster-gno.vercel.app
+- Repository: https://github.com/Onegeex/tapster
 - Demo video: <YouTube/Loom link>
 
 ## Description
@@ -58,7 +58,7 @@ Crypto / Web3 · DeFi · Gno · Infrastructure
 # Demo video script (about 3 minutes)
 
 Record with QuickTime (File → New Screen Recording). Keep the bot running with `CHAOS_KEY=tapster-r3` so a slash happens on camera. For a faster video, set 60-second rounds first:
-`gnokey maketx call -pkgpath gno.land/r/<ADDR>/tapster/v0 -func SetFeedParams -args GNOT-USD -args 60 -args 2 -args 100 -args 500 -args 500 -args 2000 ... tapster-admin`
+`gnokey maketx call -pkgpath gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapster/v0 -func SetFeedParams -args GNOT-USD -args 60 -args 2 -args 100 -args 500 -args 500 -args 2000 ... tapster-admin`
 
 | Time | Screen | Say |
 |---|---|---|

@@ -2,18 +2,19 @@
 
 **Staked, slashable price feeds that any realm can read for free.**
 
+**Live:** [tapster-gno.vercel.app](https://tapster-gno.vercel.app) · [oracle on gnoweb](https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapster/v0) · [Last Call](https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/lastcall/v0) · [Tab](https://onyx.testnets.gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tab/v0)
+
 gno.land has a DEX, wallets, DAOs and plenty of escrow apps, but no general price oracle. Anything that wants to charge in dollars, lend against collateral, trigger a stop-loss or settle a bet on a price has to trust one off-chain operator, or not get built. Tapster fills that gap with a small, readable oracle built the Gno way: the rules are the source code, and the realm renders its own dashboard on gnoweb.
 
 | | |
 |---|---|
-| Oracle realm | `gno.land/r/<deployer>/tapster/v0` |
-| Math package | `gno.land/p/<deployer>/tapmath/v0` |
-| Consumer: Last Call | `gno.land/r/<deployer>/lastcall/v0` |
-| Consumer: Tab | `gno.land/r/<deployer>/tab/v0` |
+| Oracle realm | `gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapster/v0` |
+| Math package | `gno.land/p/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapmath/v0` |
+| Consumer: Last Call | `gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/lastcall/v0` |
+| Consumer: Tab | `gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tab/v0` |
 | Network | Onyx testnet (`onyx-1`) |
 | Feeds | GNOT-USD, BTC-USD, ETH-USD, XAU-USD (gold) |
 
-> After deploying, replace `<deployer>` above with the address `deploy.sh` prints.
 
 ![Tapster web app](docs/screenshots/web-feeds.png)
 
@@ -41,8 +42,8 @@ Rounds close lazily: the first report of a new round finalizes the previous one,
 
 ```go
 import (
-    "gno.land/r/<deployer>/tapster/v0"
-    "gno.land/p/<deployer>/tapmath/v0"
+    "gno.land/r/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapster/v0"
+    "gno.land/p/g1wdkzlexhwjvltvzkfmexyrm6jf5syzrrg0ymzy/tapmath/v0"
 )
 
 func init(cur realm) {
